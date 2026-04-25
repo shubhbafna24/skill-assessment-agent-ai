@@ -1,5 +1,6 @@
 # AI-Powered Skill Assessment & Personalized Learning Plan Agent
 
+
 ## Project Overview
 This platform automates the candidate screening process by matching uploaded resumes against Job Descriptions (JDs). It uses AI to extract skills, conduct automated conversational assessments to score proficiency, and generates a personalized learning roadmap for any identified skill gaps.
 
