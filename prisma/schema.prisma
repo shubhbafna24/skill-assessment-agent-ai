@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Switch to "sqlite" for local dev without Docker if preferred
+  url      = env("DATABASE_URL")
+}
+
+model Assessment {
+  id             String         @id @default(cuid())
+  candidateName  String
+  jobTitle       String
+  resumeText     String         @db.Text
+  jdText         String         @db.Text
+  skills         SkillScore[]
+  learningPlan   LearningPlan?
+  createdAt      DateTime       @default(now())
+}
+
+model SkillScore {
+  id           String      @id @default(cuid())
+  assessmentId String
+  assessment   Assessment  @relation(fields: [assessmentId], references: [id])
+  skillName    String
+  required     Boolean     @default(true)
+  score        Float       // 0.0 to 10.0
+  reasoning    String      @db.Text
+}
+
+model LearningPlan {
+  id           String      @id @default(cuid())
+  assessmentId String      @unique
+  assessment   Assessment  @relation(fields: [assessmentId], references: [id])
+  roadmap      Json        // Stores adjacent skills, resources, timelines
+  createdAt    DateTime    @default(now())
+}
