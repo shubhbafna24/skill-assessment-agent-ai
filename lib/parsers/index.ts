@@ -1,5 +1,6 @@
 import { extractTextFromPDF } from './pdfParser';
 import { extractTextFromDocx } from './docxParser';
+import { extractTextFromTxt } from './textParser';
 
 export async function parseDocument(file: File): Promise<string> {
   const fileType = file.type;
@@ -9,13 +10,11 @@ export async function parseDocument(file: File): Promise<string> {
   let rawText = '';
 
   if (fileType === 'application/pdf') {
-    // Note: extractTextFromPDF uses 'pdf-parse'
-    rawText = await extractTextFromPDF(buffer); 
+    rawText = await extractTextFromPDF(buffer);
   } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-    // Note: extractTextFromDocx uses 'mammoth'
     rawText = await extractTextFromDocx(buffer);
   } else if (fileType === 'text/plain') {
-    rawText = buffer.toString('utf-8');
+    rawText = await extractTextFromTxt(buffer);
   } else {
     throw new Error('Unsupported file format. Please upload PDF, DOCX, or TXT.');
   }

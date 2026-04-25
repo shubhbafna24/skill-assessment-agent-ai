@@ -1,39 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAiProvider } from '@/lib/ai/providerFactory';
+import { generateAIResponse } from '@/lib/ai';
 
 export async function POST(req: NextRequest) {
   try {
     const { assessmentId } = await req.json();
     const scores = await db.skillScore.findMany({ where: { assessmentId } });
-
-    // Filter skills where candidate scored less than 7.0
     const weakSkills = scores.filter(s => s.score < 7.0).map(s => s.skillName);
 
     if (weakSkills.length === 0) {
-      return NextResponse.json({ roadmap: { message: 'Candidate meets all requirements!' } });
+      return NextResponse.json({ roadmap: { skillsToLearn: [] } });
     }
 
-    const aiProvider = getAiProvider();
-    const systemPrompt = `You are an expert career coach. Based on the missing skills provided, generate a personalized learning roadmap. 
-    Return ONLY raw JSON. Format: {"skillsToLearn": [{"skill": "Skill Name", "adjacentSkills": ["Skill A"], "resources": ["Link 1"], "estimatedTimeline": "2 weeks"}]}`;
-    
-    const userPrompt = `Generate a learning plan to bridge these skill gaps: ${weakSkills.join(', ')}`;
+    const systemPrompt = `You are an expert career coach.
+Generate a personalized learning roadmap for the missing skills provided.
+Return ONLY raw JSON — no markdown, no code fences.
+Format: {"skillsToLearn": [{"skill": "Skill Name", "adjacentSkills": ["Skill A"], "resources": ["Resource 1"], "estimatedTimeline": "2 weeks"}]}`;
 
-    const aiResponse = await aiProvider.generateAssessment(systemPrompt, userPrompt);
-    const cleanedJson = aiResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-    const roadmap = JSON.parse(cleanedJson);
+    const userPrompt = `Generate a learning plan for these skill gaps: ${weakSkills.join(', ')}`;
 
-    await db.learningPlan.create({
-      data: {
-        assessmentId,
-        roadmap: roadmap,
-      }
-    });
+    const raw = await generateAIResponse(systemPrompt, userPrompt);
+    const roadmap = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    await db.learningPlan.create({ data: { assessmentId, roadmap } });
 
     return NextResponse.json({ roadmap });
   } catch (error: any) {
-    console.error('Roadmap Error:', error);
-    return NextResponse.json({ error: 'Failed to generate roadmap' }, { status: 500 });
+    console.error('Roadmap Error:', error.message);
+    return NextResponse.json({ error: error.message || 'Failed to generate roadmap' }, { status: 500 });
   }
 }
